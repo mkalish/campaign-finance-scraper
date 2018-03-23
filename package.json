@@ -1,0 +1,19 @@
+{
+  "name": "campaign-finance-scraper",
+  "version": "1.0.0",
+  "description": "scraper for dc campaign finance data",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bluebird": "^3.5.1",
+    "ckan": "^0.2.3",
+    "lodash": "^4.17.5",
+    "moment": "^2.20.1",
+    "moment-timezone": "^0.5.14",
+    "node-fetch": "^2.0.0"
+  }
+}
