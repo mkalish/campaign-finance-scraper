@@ -26,6 +26,9 @@ const RAW_RESOURCE = '8b4c8253-7fa4-4345-8567-45c3295da6c8';
 const MAR_RESOURCE = 'a2b60c48-13dd-46b2-ade0-5281d9d2786a';
 const VALID_RESOURCE = '1fc04e5f-2feb-4401-a933-2b4fa214fc8d';
 
+
+const validAddressRegex = /^[0-9]/g
+
 const standardizeCoord = (coord) => {
     return parseFloat(coord).toPrecision(8);
 }
@@ -65,16 +68,26 @@ async function scrapeNewRows() {
         .then(out => parseInt(out.result.records[0].max, 10));
     const maxId = currentMaxObjectId + BATCH_SIZE;
     const newRows = await fetch(`http://maps2.dcgis.dc.gov/dcgis/rest/services/DCGIS_DATA/Public_Service_WebMercator/MapServer/34/query?where=objectid+<=+${maxId}+AND+objectid+>+${currentMaxObjectId}&outFields=*&f=json`)
-        .then(res => res.json())
+        .then(res => {
+            return res.json()
+        })
         .then(body => body.features)
         .catch((err) => {
             console.log(err);
         })
     if(newRows.length === 0) {
-        return false;
+        return Promise.resolve(false);
     } else {
-        const addresses = newRows.map(row => row.attributes.ADDRESS);
+        const addresses = newRows.map(row => {
+            if(!row.attributes.ADDRESS || !row.attributes.ADDRESS.match(/^[0-9]/g)) {
+                return '1234 Main Street, Mclean VA 22101'
+            }
+            
+            return row.attributes.ADDRESS
+        });
+        // addresses.map(a => console.log(a));
         const base64Addresses = new Buffer(addresses.join('|')).toString('base64');
+        // console.log(JSON.stringify({'f': 'json', 'addr_base64': base64Addresses, 'addr_separator': '|', chunkSequnce_separator: '~'}))
         const marAddresses = await fetch('http://citizenatlas.dc.gov/newwebservices/locationverifier.asmx/findLocationBatch2',
                 {
                     method: 'POST',
@@ -82,9 +95,12 @@ async function scrapeNewRows() {
                     headers: { 'Content-Type': 'application/json' },
                 }
             )
-            .then(res => res.json())
+            .then(res => {
+                return res.json()
+            })
             .then((raw) => {
                 const results = raw.slice(1);
+                console.log(results.length);
                 return results.map(r => (r.returnDataset && !_.isEmpty(r.returnDataset)) ? r.returnDataset.Table1 : [ NO_MAR_RECORD ])
             })
             .catch((err) =>{
@@ -199,9 +215,9 @@ async function scrapeNewRows() {
 async function loopUntilDone() {
     let moreRows = true;
     while(moreRows) {
-        const moreRows = await scrapeNewRows();
+        moreRows = await scrapeNewRows();
     }
-    return "done";
+    console.log('Done');
 }
 
 loopUntilDone();
